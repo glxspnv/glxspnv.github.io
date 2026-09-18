@@ -1,18 +1,12 @@
-window.portfolioProjects = [{
-slug:'yeppi-rat', game:'seoul', series:'예삐전', title:'괴물쥐 사냥', category:'분기형 시나리오',
-description:'괴물쥐를 쫓던 사냥꾼이 폐허가 된 연구소에 도착한다. 쥐를 처분하려는 소장과 한 마리만은 살리고 싶은 연구원. 사냥 끝에 남는 것은 누구의 마음일까.',
-tags:['블랙 코미디','포스트 아포칼립스','아이템·능력 분기'],script:'stories/yeppi-rat.js',entry:0,start:0,rewardNode:13,mapWidth:1260,mapHeight:2820,
-stages:[{label:'도입',node:0},{label:'제압',node:7},{label:'사격',node:9},{label:'보상',node:13},{label:'결말',node:15}],
-mapLabels:[['01 · 도입',65],['02 · 제압 방식',1000],['03 · 사격 판정',1520],['04 · 보상과 관계',2210]],
-preview:[{id:'07',title:'쥐 제압 방식 선택'},{id:'08',title:'총성',condition:'총기 + 탄약'},{id:'23',title:'캐리의 몰이',condition:'캐리'},{id:'25',title:'파이프질',condition:'괴상함 성공'},{id:'09',title:'소장을 공격하는 쥐'}]
-}];
-
-window.portfolioProjects.push({
-slug:'bitter-kim',game:'seoul',series:'기본 인카운터',title:'비터킴과 고디바양',category:'분기형 시나리오',
-description:'개미 행렬을 따라 만난 쇼콜라티에 비터킴. 고디바 양을 향한 짝사랑과 라이벌에 대한 질투가 초콜릿 연구로 이어진다. 도움, 거래, 협박 중 어떤 선택을 할까.',
-tags:['블랙 코미디','기존 인카운터 연계','가중 확률 분기'],script:'stories/bitter-kim.js',entry:0,rewardNode:10,mapWidth:1990,mapHeight:2770,
-stages:[{label:'만남',node:0},{label:'선택',node:10},{label:'초콜릿',node:11},{label:'시식',node:18},{label:'중개',node:23},{label:'위협',node:28}],
-mapLabels:[['01 · 만남',60],['02 · 도움과 위협',1140],['03 · 선택의 결과',2320]],
-preview:[{id:'10',title:'비터킴의 부탁'},{id:'11',title:'초콜릿 건네기',condition:'초콜릿'},{id:'18',title:'특제 초콜릿',condition:'초콜릿 없음'},{id:'23',title:'발전기 소개',condition:'수리 아이템 + 무한동력'},{id:'',title:'선택마다 다른 결말'}],previewIndependent:true,
-previewAlt:'비터킴의 부탁에서 초콜릿 건네기, 특제 초콜릿 시식, 발전기 소개로 갈라지는 분기'
-});
+/* Discover text files in this public GitHub Pages repository. */
+window.loadProjects=async function(){
+ const esc=s=>encodeURIComponent(s);let files,notice='';
+ const owner=location.hostname.endsWith('.github.io')?location.hostname.split('.')[0]:'glxspnv';
+ const repo=location.hostname.endsWith('.github.io')&&location.pathname.split('/').filter(Boolean).length>1?location.pathname.split('/')[1]:owner+'.github.io';
+ try{
+ if(!location.hostname.endsWith('.github.io')) throw Error('로컬 미리보기');
+ const response=await fetch(`https://api.github.com/repos/${esc(owner)}/${esc(repo)}/git/trees/HEAD?recursive=1`,{cache:'no-store',signal:AbortSignal.timeout(10000)});if(!response.ok)throw Error('목록 응답 '+response.status);const tree=await response.json();if(tree.truncated)throw Error('저장소 목록이 너무 큽니다.');files=tree.tree.filter(f=>f.type==='blob'&&/^stories\/.+\.txt$/i.test(f.path));
+ }catch(error){const response=await fetch('stories/index.json',{cache:'no-store'});if(!response.ok)throw error;files=await response.json();notice=location.hostname.endsWith('.github.io')?'자동 목록을 확인하지 못해 기본 작품 목록을 표시합니다. 새 작품이 안 보이면 잠시 후 새로고침해 주세요.':'';}
+ const results=await Promise.all(files.map(async f=>{try{const r=await fetch(f.path.split('/').map(esc).join('/')+'?v='+esc(f.sha||Date.now()),{cache:'no-store'});if(!r.ok)throw Error('원고 응답 '+r.status);return {project:StoryEngine.parse(await r.text(),f.path)};}catch(error){return {error:f.path+': '+error.message};}}));
+ const projects=[],errors=[];for(const result of results){if(result.error){errors.push(result.error);continue;}if(projects.some(p=>p.slug===result.project.slug)){errors.push(result.project.path+': 작품 ID가 중복됩니다.');continue;}projects.push(result.project);}projects.sort((a,b)=>a.path.localeCompare(b.path));return {projects,errors,notice};
+};
