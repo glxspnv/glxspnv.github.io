@@ -163,12 +163,29 @@ function pickWeighted(pool,random=Math.random){
 
 function weightedMarkup(ch,i){
   const alts=alternatesOf(ch);
-  const overrideButtons=alts.length
-    ? `<div class="judgment">${alts.map((alt,ai)=>`<button data-choice="${i}" data-alt-index="${ai}">${esc(alt.label)} <span class="destination">→ ${alt.to}</span></button>`).join('')}</div>`
-    : '';
-
   const probabilityLabel=ch.outcomes.map(o=>`${o.to}번 ${o.percent}%`).join(' / ');
-  const fallbackText=alts.length?'조건 미충족 시 확률대로 진행하기':'확률대로 진행하기';
+
+  if(alts.length){
+    return `<div class="choice probability-choice">
+      <div class="choice-main">
+        <div class="choice-top">
+          <span>${formatText(ch.text,`choice-${selected}-${i}`)}</span>
+          <span class="choice-arrow">⑂</span>
+        </div>
+        ${ch.effect?`<div class="choice-meta"><span class="effect">${esc(ch.effect)}</span></div>`:''}
+      </div>
+      <div class="judgment">
+        ${alts.map((alt,ai)=>`<button data-choice="${i}" data-alt-index="${ai}">${esc(alt.label)} <span class="destination">→ ${alt.to}</span></button>`).join('')}
+        <button data-choice="${i}" data-fallback="weighted">${esc(alts.length===1?alts[0].base:'모든 조건 미충족')} <span class="destination">→ 확률 분기</span></button>
+      </div>
+      <div class="choice-meta probability-meta">
+        <span class="condition">조건 미충족 시 · ${esc(probabilityLabel)}</span>
+      </div>
+      <div class="judgment probability-results">
+        ${ch.outcomes.map(o=>`<button data-choice="${i}" data-outcome="${o.to}">${o.percent}% 결과 보기 <span class="destination">→ ${o.to}</span></button>`).join('')}
+      </div>
+    </div>${variantDetails(ch.text,`choice-${selected}-${i}`)}`;
+  }
 
   return `<div class="choice probability-choice">
     <div class="choice-main">
@@ -177,13 +194,11 @@ function weightedMarkup(ch,i){
         <span class="choice-arrow">⑂</span>
       </div>
       <div class="choice-meta">
-        ${alts.map(alt=>`<span class="condition">${esc(alt.label)} → ${alt.to}</span>`).join('')}
-        <span class="condition">${alts.length?'조건 미충족 · ':''}확률 분기 · ${esc(probabilityLabel)}</span>
+        <span class="condition">확률 분기 · ${esc(probabilityLabel)}</span>
         ${ch.effect?`<span class="effect">${esc(ch.effect)}</span>`:''}
       </div>
     </div>
-    ${overrideButtons}
-    <button class="roll-choice" data-choice="${i}">${fallbackText} <span>↗</span></button>
+    <button class="roll-choice" data-choice="${i}">확률대로 진행하기 <span>↗</span></button>
     <div class="judgment">
       ${ch.outcomes.map(o=>`<button data-choice="${i}" data-outcome="${o.to}">${o.percent}% 결과 보기 <span class="destination">→ ${o.to}</span></button>`).join('')}
     </div>
@@ -256,13 +271,13 @@ function renderReader(){
       const alt=alts[Number(b.dataset.altIndex)];
       if(!alt)return;
       to=alt.to;
-      effect=[effect,alt.label].filter(Boolean).join(' / ');
+      effect=[effect,`${alt.label} → ${alt.to}번`].filter(Boolean).join(' / ');
     }else if(ch.weighted){
       to=b.dataset.outcome!==undefined
         ? (b.dataset.outcome==='F'?'F':Number(b.dataset.outcome))
         : pickWeighted(ch.weighted);
       const probability=ch.outcomes.find(o=>String(o.to)===String(to))?.percent;
-      effect=[effect,`${b.dataset.outcome!==undefined?'결과 열람':'확률 진행'} · ${probability}% 경로 → ${to}번`].filter(Boolean).join(' / ');
+      effect=[effect,`${b.dataset.outcome!==undefined?'결과 열람':'조건 미충족 · 확률 진행'} · ${probability}% 경로 → ${to}번`].filter(Boolean).join(' / ');
     }
 
     edgesVisited.add(`${selected}-${to}`);
